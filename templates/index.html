@@ -618,14 +618,34 @@
                     <div class="panel">
                         <div class="panel-header" style="justify-content: space-between;">
                             <div>
-                                <h3><i class="fa-solid fa-satellite-dish"></i> GPS Proximity Grid</h3>
-                                <p class="subtitle">Live position telemetry & distance to hazards.</p>
+                                <h3><i class="fa-solid fa-satellite-dish"></i> GPS Proximity Grid & 360° Radar</h3>
+                                <p class="subtitle">Live position telemetry, sweep radar & distance to hazards.</p>
                             </div>
-                            <a href="/worker-safety" target="_blank" class="btn btn-sm btn-primary">
-                                <i class="fa-solid fa-mobile-screen-button"></i> Mobile Worker
-                            </a>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-sm btn-secondary" onclick="toggleRadarSweep()">
+                                    <i class="fa-solid fa-arrows-rotate"></i> Radar Sweep
+                                </button>
+                                <a href="/worker-safety" target="_blank" class="btn btn-sm btn-primary">
+                                    <i class="fa-solid fa-mobile-screen-button"></i> Mobile Worker
+                                </a>
+                            </div>
                         </div>
                         <div class="panel-body">
+                            <!-- 360 Tactical HUD Radar Canvas -->
+                            <div style="background: radial-gradient(circle at center, #1e293b 0%, #0b1120 100%); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px; border: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                                <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-family: var(--font-heading); font-size: 0.85rem; font-weight: 700; color: #38bdf8;">
+                                        <i class="fa-solid fa-crosshairs"></i> TACTICAL MICRO-PROXIMITY RADAR SWEEPER
+                                    </span>
+                                    <div style="display:flex; gap:12px; font-size:0.75rem; font-weight:600;">
+                                        <span style="color:#ef4444;"><i class="fa-solid fa-circle"></i> &lt;10m Danger</span>
+                                        <span style="color:#f59e0b;"><i class="fa-solid fa-circle"></i> &lt;25m Warning</span>
+                                        <span style="color:#22c55e;"><i class="fa-solid fa-circle"></i> Safe Corridor</span>
+                                    </div>
+                                </div>
+                                <canvas id="hud-radar-canvas" width="560" height="300" style="width: 100%; max-width: 560px; height: 300px; background: transparent;"></canvas>
+                            </div>
+
                             <div class="gps-workers-grid" id="gps-workers-container"></div>
                         </div>
                     </div>
@@ -637,8 +657,21 @@
                             <h3><i class="fa-solid fa-sliders"></i> Proximity Simulator</h3>
                         </div>
                         <div class="panel-body">
+                            <!-- Autonomous Multi-Worker Patrol Switch -->
+                            <div style="margin-bottom: 14px; padding: 12px; background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.3); border-radius: var(--radius-md);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                    <span style="font-size:0.8rem; font-weight:700; color:#60a5fa;"><i class="fa-solid fa-person-walking"></i> Autonomous Site Patrol</span>
+                                    <button id="btn-toggle-dash-patrol" class="btn btn-sm btn-primary" onclick="toggleDashboardAutoPatrol()">
+                                        START PATROL
+                                    </button>
+                                </div>
+                                <p style="font-size:0.74rem; color:var(--text-muted); margin:0; line-height:1.35;">
+                                    Simulates natural worker movement along construction corridors, entering warning and danger zones dynamically.
+                                </p>
+                            </div>
+
                             <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">
-                                Simulate worker movement to test alerts & exposure tracking.
+                                Manual override to test specific alert thresholds:
                             </p>
 
                             <div class="form-group" style="margin-bottom:10px;">

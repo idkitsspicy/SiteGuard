@@ -562,17 +562,71 @@
                     </div>
                 </div>
 
-                <!-- Distance Simulator for Testing -->
-                <div class="simulator-box">
-                    <div class="sim-header">
-                        <span><i class="fa-solid fa-sliders"></i> Proximity Simulator (Test Distance)</span>
-                        <span id="sim-dist-val" style="color:#fff; font-weight:800;">6.8 m</span>
+                <!-- Dynamic Movement & Tracking Control -->
+                <div class="simulator-box" style="border: 1px solid #3b82f6;">
+                    <div class="sim-header" style="justify-content:space-between; margin-bottom:10px;">
+                        <span><i class="fa-solid fa-satellite-dish"></i> TELEMETRY ENGINE</span>
+                        <span id="movement-mode-badge" style="background:#2563eb; color:#fff; padding:2px 8px; border-radius:12px; font-size:0.68rem; font-weight:700;">AUTO PATROL</span>
                     </div>
-                    <input type="range" min="1" max="40" step="0.5" value="6.8" class="sim-slider" id="sim-slider" oninput="onSimSliderChange(this.value)">
-                    <div class="sim-presets">
-                        <button class="sim-btn sim-btn-danger" onclick="setSimDistance(4.5)">4.5m Danger</button>
-                        <button class="sim-btn sim-btn-warning" onclick="setSimDistance(15.0)">15m Warning</button>
-                        <button class="sim-btn sim-btn-safe" onclick="setSimDistance(32.0)">32m Safe</button>
+
+                    <!-- Mode Selector Tabs -->
+                    <div style="display:flex; gap:4px; margin-bottom:12px; background:#0f172a; padding:3px; border-radius:8px;">
+                        <button id="mode-btn-auto" class="sim-btn" style="flex:1; background:#2563eb; color:#fff;" onclick="setTrackingMode('auto')">
+                            <i class="fa-solid fa-person-walking"></i> Auto Patrol
+                        </button>
+                        <button id="mode-btn-gps" class="sim-btn" style="flex:1; background:transparent; color:#94a3b8;" onclick="setTrackingMode('gps')">
+                            <i class="fa-solid fa-location-crosshairs"></i> Real GPS
+                        </button>
+                        <button id="mode-btn-manual" class="sim-btn" style="flex:1; background:transparent; color:#94a3b8;" onclick="setTrackingMode('manual')">
+                            <i class="fa-solid fa-sliders"></i> Manual
+                        </button>
+                    </div>
+
+                    <!-- Auto Patrol Status Panel -->
+                    <div id="panel-mode-auto" style="display:block; font-size:0.78rem; color:#cbd5e1; background:rgba(30,41,59,0.7); border-radius:8px; padding:10px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span>Patrol Trajectory:</span>
+                            <span id="patrol-phase-text" style="color:#60a5fa; font-weight:700;">Approaching Hazard</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span>Pacing Speed:</span>
+                            <span id="patrol-speed-text" style="color:#fff; font-weight:600;">1.2 m/s (Normal Walk)</span>
+                        </div>
+                        <div style="font-size:0.7rem; color:#94a3b8; margin-top:6px; line-height:1.3;">
+                            <i class="fa-solid fa-circle-info" style="color:#60a5fa;"></i> Continuously moves worker along construction corridors, automatically entering & exiting hazard zones to demonstrate live dynamic alerts.
+                        </div>
+                    </div>
+
+                    <!-- Real Phone GPS Hardware Panel -->
+                    <div id="panel-mode-gps" style="display:none; font-size:0.78rem; color:#cbd5e1; background:rgba(30,41,59,0.7); border-radius:8px; padding:10px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span>Hardware Satellites:</span>
+                            <span id="real-gps-status" style="color:#22c55e; font-weight:700;">Awaiting Fix...</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                            <span>Live Coordinates:</span>
+                            <span id="real-gps-coords" style="color:#fff; font-family:monospace; font-size:0.72rem;">-- , --</span>
+                        </div>
+                        <button class="sim-btn sim-btn-warning" style="width:100%; margin-top:4px;" onclick="calibrateRealGpsAnchor()">
+                            <i class="fa-solid fa-bullseye"></i> Set Hazard 15m Ahead of My Location
+                        </button>
+                        <div style="font-size:0.68rem; color:#94a3b8; margin-top:6px;">
+                            Physical walking will decrease your distance to the hazard in real-time.
+                        </div>
+                    </div>
+
+                    <!-- Manual Slider Panel -->
+                    <div id="panel-mode-manual" style="display:none;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.75rem; color:#94a3b8;">
+                            <span>Target Distance:</span>
+                            <span id="sim-dist-val" style="color:#fff; font-weight:800;">6.8 m</span>
+                        </div>
+                        <input type="range" min="1" max="40" step="0.5" value="6.8" class="sim-slider" id="sim-slider" oninput="onSimSliderChange(this.value)">
+                        <div class="sim-presets">
+                            <button class="sim-btn sim-btn-danger" onclick="setSimDistance(4.5)">4.5m Danger</button>
+                            <button class="sim-btn sim-btn-warning" onclick="setSimDistance(15.0)">15m Warning</button>
+                            <button class="sim-btn sim-btn-safe" onclick="setSimDistance(32.0)">32m Safe</button>
+                        </div>
                     </div>
                 </div>
 
@@ -606,7 +660,45 @@
         let audioCtx = null;
         let alarmBeepInterval = null;
         let currentWorkerId = "W024";
-        let currentSimDistance = 6.8;
+        let currentSimDistance = 28.0;
+        let trackingMode = "auto"; // 'auto', 'gps', 'manual'
+
+        // Auto-Patrol State Machine
+        let patrolPhase = "approaching"; // 'approaching', 'danger_pause', 'retreating', 'perimeter_walk'
+        let patrolPauseTicks = 0;
+        let patrolStep = 1.4;
+
+        // Real Phone GPS State
+        let realGpsWatchId = null;
+        let realGpsAnchor = null; // {lat, lng}
+        let latestRealCoords = null;
+
+        function setTrackingMode(mode) {
+            trackingMode = mode;
+            document.getElementById('panel-mode-auto').style.display = (mode === 'auto') ? 'block' : 'none';
+            document.getElementById('panel-mode-gps').style.display = (mode === 'gps') ? 'block' : 'none';
+            document.getElementById('panel-mode-manual').style.display = (mode === 'manual') ? 'block' : 'none';
+
+            document.getElementById('mode-btn-auto').style.background = (mode === 'auto') ? '#2563eb' : 'transparent';
+            document.getElementById('mode-btn-auto').style.color = (mode === 'auto') ? '#fff' : '#94a3b8';
+            document.getElementById('mode-btn-gps').style.background = (mode === 'gps') ? '#2563eb' : 'transparent';
+            document.getElementById('mode-btn-gps').style.color = (mode === 'gps') ? '#fff' : '#94a3b8';
+            document.getElementById('mode-btn-manual').style.background = (mode === 'manual') ? '#2563eb' : 'transparent';
+            document.getElementById('mode-btn-manual').style.color = (mode === 'manual') ? '#fff' : '#94a3b8';
+
+            const badge = document.getElementById('movement-mode-badge');
+            if (mode === 'auto') badge.innerText = "AUTO PATROL";
+            else if (mode === 'gps') badge.innerText = "REAL PHONE GPS";
+            else badge.innerText = "MANUAL";
+
+            if (mode === 'gps') {
+                startRealGpsWatcher();
+            } else {
+                stopRealGpsWatcher();
+            }
+
+            if (isSafetyActive) sendTelemetry();
+        }
 
         function setWorkerId(id) {
             currentWorkerId = id;
@@ -627,26 +719,147 @@
                 btn.innerHTML = `<i class="fa-solid fa-stop"></i> STOP SAFETY MODE`;
                 liveLabel.innerText = "LIVE GPS ON";
 
-                // Trigger initial telemetry & set 2s interval
-                sendTelemetry();
-                trackingInterval = setInterval(sendTelemetry, 2000);
+                // Initialize Audio Context on user tap
+                try {
+                    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                } catch(e){}
 
-                // Request browser location if available
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        pos => console.log("[GPS] Real Location Acquired:", pos.coords),
-                        err => console.warn("[GPS] Using simulated spatial coordinates:", err.message),
-                        { enableHighAccuracy: true }
-                    );
+                // Start Telemetry Loop every 1.5s
+                sendTelemetry();
+                trackingInterval = setInterval(sendTelemetry, 1500);
+
+                if (trackingMode === 'gps') {
+                    startRealGpsWatcher();
                 }
             } else {
                 btn.className = "btn-action btn-start";
                 btn.innerHTML = `<i class="fa-solid fa-play"></i> START SAFETY MODE`;
                 liveLabel.innerText = "READY";
                 if (trackingInterval) clearInterval(trackingInterval);
+                stopRealGpsWatcher();
                 stopAlarmSound();
                 hideDangerOverlay();
             }
+        }
+
+        // Real Phone GPS Hardware Integration
+        function startRealGpsWatcher() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+            if (realGpsWatchId) return;
+
+            realGpsWatchId = navigator.geolocation.watchPosition(
+                pos => {
+                    latestRealCoords = pos.coords;
+                    const statusEl = document.getElementById('real-gps-status');
+                    const coordsEl = document.getElementById('real-gps-coords');
+                    if (statusEl) statusEl.innerText = `Locked (±${pos.coords.accuracy.toFixed(1)}m)`;
+                    if (coordsEl) coordsEl.innerText = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+
+                    if (!realGpsAnchor) {
+                        calibrateRealGpsAnchor();
+                    } else {
+                        // Calculate real-world displacement to simulated hazard
+                        const d = calculateGpsDistance(pos.coords.latitude, pos.coords.longitude, realGpsAnchor.lat, realGpsAnchor.lng);
+                        currentSimDistance = Math.max(1.0, Math.min(60.0, d));
+                        document.getElementById('distance-display').innerText = currentSimDistance.toFixed(1);
+                    }
+                },
+                err => {
+                    console.warn("[Real GPS Error]:", err.message);
+                    const statusEl = document.getElementById('real-gps-status');
+                    if (statusEl) statusEl.innerText = "Signal Weak (Sim active)";
+                },
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+            );
+        }
+
+        function stopRealGpsWatcher() {
+            if (realGpsWatchId && navigator.geolocation) {
+                navigator.geolocation.clearWatch(realGpsWatchId);
+                realGpsWatchId = null;
+            }
+        }
+
+        function calibrateRealGpsAnchor() {
+            if (latestRealCoords) {
+                // Place hazard ~15m North-East from where the user is currently standing
+                const latOffset = 15.0 / 111000.0;
+                realGpsAnchor = {
+                    lat: latestRealCoords.latitude + latOffset,
+                    lng: latestRealCoords.longitude + latOffset
+                };
+                alert("Anchor calibrated! As you walk toward or away from this spot, your hazard distance will shift dynamically.");
+            } else {
+                alert("Waiting for GPS satellite lock... Make sure Location Permissions are allowed.");
+            }
+        }
+
+        function calculateGpsDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Autonomous Walking Simulation Engine
+        function advanceAutoPatrol() {
+            const phaseEl = document.getElementById('patrol-phase-text');
+            const speedEl = document.getElementById('patrol-speed-text');
+
+            if (patrolPhase === "approaching") {
+                // Walk closer to hazard
+                currentSimDistance -= patrolStep + (Math.random() * 0.4 - 0.2);
+                if (phaseEl) phaseEl.innerText = "Approaching Hazard";
+                if (speedEl) speedEl.innerText = "1.3 m/s (Walking)";
+
+                if (currentSimDistance <= 4.8) {
+                    currentSimDistance = 4.8;
+                    patrolPhase = "danger_pause";
+                    patrolPauseTicks = 0;
+                }
+            } else if (patrolPhase === "danger_pause") {
+                // Stay in critical zone for a few ticks to trigger siren & alerts
+                patrolPauseTicks++;
+                if (phaseEl) phaseEl.innerText = "CRITICAL: Near Fall Hazard";
+                if (speedEl) speedEl.innerText = "0.0 m/s (Worker Stopped)";
+
+                if (patrolPauseTicks >= 3) {
+                    patrolPhase = "retreating";
+                }
+            } else if (patrolPhase === "retreating") {
+                // Step back to safe zone
+                currentSimDistance += (patrolStep * 1.5) + (Math.random() * 0.4);
+                if (phaseEl) phaseEl.innerText = "Retreating to Safe Area";
+                if (speedEl) speedEl.innerText = "1.8 m/s (Evacuating)";
+
+                if (currentSimDistance >= 32.0) {
+                    currentSimDistance = 32.0;
+                    patrolPhase = "perimeter_walk";
+                    patrolPauseTicks = 0;
+                }
+            } else if (patrolPhase === "perimeter_walk") {
+                // Roam safe perimeter
+                currentSimDistance += (Math.random() * 2.0 - 1.0);
+                currentSimDistance = Math.max(26.0, Math.min(36.0, currentSimDistance));
+                if (phaseEl) phaseEl.innerText = "Safe Perimeter Patrol";
+                if (speedEl) speedEl.innerText = "0.9 m/s (Staging Area)";
+
+                patrolPauseTicks++;
+                if (patrolPauseTicks >= 4) {
+                    patrolPhase = "approaching";
+                }
+            }
+
+            document.getElementById('sim-dist-val').innerText = currentSimDistance.toFixed(1) + " m";
+            document.getElementById('sim-slider').value = currentSimDistance;
         }
 
         function onSimSliderChange(val) {
@@ -665,16 +878,30 @@
             const floor = document.getElementById('floor-select').value;
             const zone = document.getElementById('zone-select').value;
 
+            // In Auto Patrol mode, advance the autonomous walk
+            if (trackingMode === 'auto') {
+                advanceAutoPatrol();
+            }
+
             try {
+                let payload = {
+                    worker_id: currentWorkerId,
+                    distance_m: currentSimDistance,
+                    floor: floor,
+                    zone: zone
+                };
+
+                // If real GPS has lock, include coordinates
+                if (trackingMode === 'gps' && latestRealCoords) {
+                    payload.latitude = latestRealCoords.latitude;
+                    payload.longitude = latestRealCoords.longitude;
+                    payload.accuracy = latestRealCoords.accuracy;
+                }
+
                 const response = await fetch('/api/gps/simulate-move', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        worker_id: currentWorkerId,
-                        distance_m: currentSimDistance,
-                        floor: floor,
-                        zone: zone
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) return;

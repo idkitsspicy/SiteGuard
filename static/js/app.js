@@ -1673,3 +1673,261 @@ async function triggerDashSimPreset(distM) {
         console.error("Error sending sim update:", e);
     }
 }
+
+/* ==========================================================================
+   DYNAMIC 360° TACTICAL RADAR CANVAS & AUTONOMOUS PATROL ENGINE
+   ========================================================================== */
+let radarSweepAngle = 0;
+let radarAnimFrame = null;
+let isRadarSweepActive = true;
+let dashAutoPatrolInterval = null;
+let isDashAutoPatrolActive = false;
+
+// Multi-worker patrol state
+let dashWorkersPatrol = {
+    "W024": { dist: 28.0, step: -1.3, phase: "approach", angle: 0.8 },
+    "W008": { dist: 14.5, step: -0.9, phase: "approach", angle: 2.4 },
+    "W012": { dist: 35.0, step: 0.8, phase: "retreat", angle: 4.1 }
+};
+
+function toggleRadarSweep() {
+    isRadarSweepActive = !isRadarSweepActive;
+    if (isRadarSweepActive && !radarAnimFrame) {
+        requestAnimationFrame(animateRadarSweep);
+    }
+}
+
+function startRadarCanvas() {
+    if (!radarAnimFrame) {
+        requestAnimationFrame(animateRadarSweep);
+    }
+}
+
+function animateRadarSweep() {
+    if (getActiveTabId() === 'tab-gps-radar') {
+        radarSweepAngle += 0.025;
+        if (radarSweepAngle >= Math.PI * 2) radarSweepAngle = 0;
+        drawRadarHUD();
+    }
+    radarAnimFrame = requestAnimationFrame(animateRadarSweep);
+}
+
+function drawRadarHUD() {
+    const canvas = document.getElementById('hud-radar-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const cx = width / 2;
+    const cy = height / 2;
+    const maxRadius = Math.min(cx, cy) - 20;
+
+    // Scale: 40 meters = maxRadius
+    const metersToPx = (m) => (m / 40.0) * maxRadius;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // 1. Azimuth crosshairs & concentric circles
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.15)";
+    ctx.lineWidth = 1;
+
+    // Crosshairs
+    ctx.beginPath();
+    ctx.moveTo(cx - maxRadius, cy);
+    ctx.lineTo(cx + maxRadius, cy);
+    ctx.moveTo(cx, cy - maxRadius);
+    ctx.lineTo(cx, cy + maxRadius);
+    ctx.stroke();
+
+    // Safe zone outer circle (40m)
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(34, 197, 94, 0.25)";
+    ctx.stroke();
+
+    // Warning zone circle (25m)
+    const r25 = metersToPx(25.0);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r25, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Danger zone circle (<10m)
+    const r10 = metersToPx(10.0);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r10, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(239, 68, 68, 0.12)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.7)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.lineWidth = 1;
+
+    // Range Labels
+    ctx.fillStyle = "rgba(148, 163, 184, 0.7)";
+    ctx.font = "10px Inter, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("10m DANGER", cx, cy - r10 + 12);
+    ctx.fillText("25m WARNING", cx, cy - r25 + 12);
+    ctx.fillText("40m SAFE PERIMETER", cx, cy - maxRadius + 12);
+
+    // Center Hazard Point (HAZ-001)
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#ef4444";
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.stroke();
+
+    ctx.fillStyle = "#fca5a5";
+    ctx.font = "bold 10px Outfit, sans-serif";
+    ctx.fillText("HAZARD: OPEN LEDGE", cx, cy + 18);
+
+    // 2. Rotating Radar Sweep Beam
+    if (isRadarSweepActive) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, maxRadius, radarSweepAngle - 0.35, radarSweepAngle);
+        ctx.closePath();
+
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxRadius);
+        grad.addColorStop(0, "rgba(56, 189, 248, 0.35)");
+        grad.addColorStop(1, "rgba(56, 189, 248, 0.0)");
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Lead line
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(radarSweepAngle) * maxRadius, cy + Math.sin(radarSweepAngle) * maxRadius);
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.8)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // 3. Render Worker Blips
+    const workers = (gpsDataCache && gpsDataCache.gps_workers) ? gpsDataCache.gps_workers : [];
+    workers.forEach((w, idx) => {
+        const dist = Math.min(42.0, w.distance_m || 20.0);
+        const rPx = metersToPx(dist);
+
+        // Calculate stable angular placement for each worker ID
+        let angle = 0.5 + idx * 1.8;
+        if (w.worker_id === "W024") angle = 1.1;
+        if (w.worker_id === "W008") angle = 2.6;
+        if (w.worker_id === "W012") angle = 4.3;
+
+        const bx = cx + Math.cos(angle) * rPx;
+        const by = cy + Math.sin(angle) * rPx;
+
+        const isCritical = (w.safety_status === 'CRITICAL' || dist <= 10.0);
+        const isWarning = (w.safety_status === 'WARNING' || (dist <= 25.0 && dist > 10.0));
+
+        let dotColor = "#22c55e";
+        if (isCritical) dotColor = "#ef4444";
+        else if (isWarning) dotColor = "#f59e0b";
+
+        // Connecting distance vector to center
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(bx, by);
+        ctx.strokeStyle = isCritical ? "rgba(239, 68, 68, 0.4)" : "rgba(148, 163, 184, 0.15)";
+        ctx.setLineDash([2, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Shockwave ripple if critical
+        if (isCritical) {
+            const rippleR = 8 + (Date.now() % 1000) / 1000 * 14;
+            ctx.beginPath();
+            ctx.arc(bx, by, rippleR, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(239, 68, 68, ${1 - (rippleR - 8) / 14})`;
+            ctx.stroke();
+        }
+
+        // Blip Dot
+        ctx.beginPath();
+        ctx.arc(bx, by, isCritical ? 7 : 5, 0, Math.PI * 2);
+        ctx.fillStyle = dotColor;
+        ctx.fill();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Worker Label Tag
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 10px Inter, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(`${w.worker_id} (${dist.toFixed(1)}m)`, bx + 9, by + 3);
+    });
+}
+
+// Autonomous Multi-Worker Patrol Simulation
+function toggleDashboardAutoPatrol() {
+    isDashAutoPatrolActive = !isDashAutoPatrolActive;
+    const btn = document.getElementById('btn-toggle-dash-patrol');
+
+    if (isDashAutoPatrolActive) {
+        if (btn) {
+            btn.className = "btn btn-sm btn-danger";
+            btn.innerText = "STOP PATROL";
+        }
+
+        // Run continuous simulation step every 1.5s
+        dashAutoPatrolInterval = setInterval(async () => {
+            const workerKeys = Object.keys(dashWorkersPatrol);
+            for (let wid of workerKeys) {
+                let wp = dashWorkersPatrol[wid];
+                if (wp.phase === "approach") {
+                    wp.dist -= 1.3 + (Math.random() * 0.4 - 0.2);
+                    if (wp.dist <= 4.5) {
+                        wp.dist = 4.5;
+                        wp.phase = "danger";
+                    }
+                } else if (wp.phase === "danger") {
+                    // linger briefly then retreat
+                    wp.phase = "retreat";
+                } else if (wp.phase === "retreat") {
+                    wp.dist += 1.8 + (Math.random() * 0.3);
+                    if (wp.dist >= 33.0) {
+                        wp.dist = 33.0;
+                        wp.phase = "approach";
+                    }
+                }
+
+                // Send live position update
+                try {
+                    await fetch('/api/gps/simulate-move', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            worker_id: wid,
+                            distance_m: parseFloat(wp.dist.toFixed(1)),
+                            floor: 'Floor 2',
+                            zone: wid === 'W024' ? 'Zone B' : (wid === 'W008' ? 'Zone D' : 'Zone A')
+                        })
+                    });
+                } catch(e){}
+            }
+            fetchGPSWorkers();
+        }, 1500);
+    } else {
+        if (btn) {
+            btn.className = "btn btn-sm btn-primary";
+            btn.innerText = "START PATROL";
+        }
+        if (dashAutoPatrolInterval) clearInterval(dashAutoPatrolInterval);
+    }
+}
+
+// Automatically initiate radar sweep loop
+if (typeof window !== "undefined") {
+    startRadarCanvas();
+}
+
