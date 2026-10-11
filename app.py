@@ -415,20 +415,25 @@ def update_worker_gps():
     floor_hazards = [h for h in hazards if h.get("floor") == floor]
     check_hazards = floor_hazards if floor_hazards else hazards
 
-    nearest_hazard = None
-    min_dist = 999999.0
+    client_dist = data.get("distance_m")
+    if client_dist is not None and float(client_dist) >= 0:
+        min_dist = float(client_dist)
+        if check_hazards:
+            nearest_hazard = check_hazards[0]
+        elif hazards:
+            nearest_hazard = hazards[0]
+    else:
+        for h in check_hazards:
+            h_lat = float(h["lat"])
+            h_lng = float(h["lng"])
+            d = calculate_haversine_distance(lat, lng, h_lat, h_lng)
+            if d < min_dist:
+                min_dist = d
+                nearest_hazard = h
 
-    for h in check_hazards:
-        h_lat = float(h["lat"])
-        h_lng = float(h["lng"])
-        d = calculate_haversine_distance(lat, lng, h_lat, h_lng)
-        if d < min_dist:
-            min_dist = d
-            nearest_hazard = h
-
-    if nearest_hazard is None and hazards:
-        nearest_hazard = hazards[0]
-        min_dist = calculate_haversine_distance(lat, lng, hazards[0]["lat"], hazards[0]["lng"])
+        if nearest_hazard is None and hazards:
+            nearest_hazard = hazards[0]
+            min_dist = calculate_haversine_distance(lat, lng, hazards[0]["lat"], hazards[0]["lng"])
 
     danger_r = nearest_hazard.get("danger_radius_m", 10.0) if nearest_hazard else 10.0
     warning_r = nearest_hazard.get("warning_radius_m", 25.0) if nearest_hazard else 25.0
@@ -558,21 +563,28 @@ def simulate_worker_move():
     hazards = SITE_STATE.get("gps_hazards", [])
     hz = next((h for h in hazards if h.get("floor") == floor), hazards[0] if hazards else None)
 
-    if hz:
+    if "latitude" in data and "longitude" in data:
+        new_lat = float(data["latitude"])
+        new_lng = float(data["longitude"])
+        accuracy = float(data.get("accuracy", 3.0))
+    elif hz:
         hz_lat = float(hz["lat"])
         hz_lng = float(hz["lng"])
-        offset_deg = (distance_target / 111000.0)
+        offset_deg = (distance_target / 111139.0)
         new_lat = hz_lat - offset_deg
-        new_lng = hz_lng - offset_deg
+        new_lng = hz_lng
+        accuracy = 2.5
     else:
         new_lat = 17.380800
         new_lng = 78.382090
+        accuracy = 3.5
 
     req_payload = {
         "worker_id": worker_id,
         "latitude": new_lat,
         "longitude": new_lng,
-        "accuracy": 3.5,
+        "distance_m": distance_target,
+        "accuracy": accuracy,
         "floor": floor,
         "zone": zone
     }

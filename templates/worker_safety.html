@@ -746,7 +746,12 @@
             }
         }
 
-        // Real Phone GPS Hardware Integration
+        // Real Phone GPS State (Default: Vasavi College of Engineering, Ibrahimbagh)
+        let realGpsWatchId = null;
+        let realGpsAnchor = { lat: 17.380820, lng: 78.382100 };
+        let latestRealCoords = null;
+        let smoothedGpsDistance = null; // Exponential Moving Average (EMA) distance filter
+
         function startRealGpsWatcher() {
             if (!navigator.geolocation) {
                 alert("Geolocation is not supported by your browser.");
@@ -762,13 +767,27 @@
                     if (statusEl) statusEl.innerText = `Locked (±${pos.coords.accuracy.toFixed(1)}m)`;
                     if (coordsEl) coordsEl.innerText = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
 
-                    if (!realGpsAnchor) {
-                        calibrateRealGpsAnchor();
+                    // Calculate real-world displacement to active anchor
+                    const rawDist = calculateGpsDistance(pos.coords.latitude, pos.coords.longitude, realGpsAnchor.lat, realGpsAnchor.lng);
+
+                    // Low-Pass Exponential Moving Average filter to kill satellite jitter
+                    if (smoothedGpsDistance === null) {
+                        smoothedGpsDistance = rawDist;
                     } else {
-                        // Calculate real-world displacement to simulated hazard
-                        const d = calculateGpsDistance(pos.coords.latitude, pos.coords.longitude, realGpsAnchor.lat, realGpsAnchor.lng);
-                        currentSimDistance = Math.max(1.0, Math.min(60.0, d));
-                        document.getElementById('distance-display').innerText = currentSimDistance.toFixed(1);
+                        // Smoothly blend 30% new reading + 70% previous smoothed value
+                        smoothedGpsDistance = (0.30 * rawDist) + (0.70 * smoothedGpsDistance);
+                    }
+
+                    currentSimDistance = Math.max(0.5, parseFloat(smoothedGpsDistance.toFixed(1)));
+                    
+                    // Display distance cleanly without glitching
+                    const distDisplay = document.getElementById('distance-display');
+                    if (distDisplay) {
+                        if (currentSimDistance >= 1000) {
+                            distDisplay.innerText = (currentSimDistance / 1000).toFixed(2) + " k";
+                        } else {
+                            distDisplay.innerText = currentSimDistance.toFixed(1);
+                        }
                     }
                 },
                 err => {
@@ -776,7 +795,7 @@
                     const statusEl = document.getElementById('real-gps-status');
                     if (statusEl) statusEl.innerText = "Signal Weak (Sim active)";
                 },
-                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                { enableHighAccuracy: true, maximumAge: 1000, timeout: 6000 }
             );
         }
 
@@ -785,6 +804,7 @@
                 navigator.geolocation.clearWatch(realGpsWatchId);
                 realGpsWatchId = null;
             }
+            smoothedGpsDistance = null;
         }
 
         function lockToVasaviCampusAnchor() {
@@ -792,23 +812,37 @@
                 lat: 17.380820,
                 lng: 78.382100
             };
+            smoothedGpsDistance = null;
             if (latestRealCoords) {
-                const d = calculateGpsDistance(latestRealCoords.latitude, latestRealCoords.longitude, realGpsAnchor.lat, realGpsAnchor.lng);
-                currentSimDistance = Math.max(1.0, Math.min(999.0, d));
-                document.getElementById('distance-display').innerText = currentSimDistance.toFixed(1);
+                const rawDist = calculateGpsDistance(latestRealCoords.latitude, latestRealCoords.longitude, realGpsAnchor.lat, realGpsAnchor.lng);
+                smoothedGpsDistance = rawDist;
+                currentSimDistance = parseFloat(rawDist.toFixed(1));
+                const distDisplay = document.getElementById('distance-display');
+                if (distDisplay) {
+                    if (currentSimDistance >= 1000) {
+                        distDisplay.innerText = (currentSimDistance / 1000).toFixed(2) + " k";
+                    } else {
+                        distDisplay.innerText = currentSimDistance.toFixed(1);
+                    }
+                }
             }
             alert("Locked anchor to Vasavi College of Engineering (17.380820° N, 78.382100° E)!");
         }
 
         function calibrateRealGpsAnchor() {
             if (latestRealCoords) {
-                // Place hazard ~15m North-East from where the user is currently standing
-                const latOffset = 15.0 / 111000.0;
+                // Place virtual hazard exactly 15m North from current phone position
+                const latOffset = 15.0 / 111139.0;
                 realGpsAnchor = {
                     lat: latestRealCoords.latitude + latOffset,
-                    lng: latestRealCoords.longitude + latOffset
+                    lng: latestRealCoords.longitude
                 };
-                alert("Anchor calibrated! As you walk toward or away from this spot, your hazard distance will shift dynamically.");
+                smoothedGpsDistance = 15.0;
+                currentSimDistance = 15.0;
+                const distDisplay = document.getElementById('distance-display');
+                if (distDisplay) distDisplay.innerText = "15.0";
+
+                alert("Virtual Hazard set 15m North of your location! Take physical steps forward to test the proximity alarm.");
             } else {
                 alert("Waiting for GPS satellite lock... Make sure Location Permissions are allowed.");
             }
@@ -936,7 +970,9 @@
             const dist = w.distance_m;
             const status = w.safety_status;
 
-            document.getElementById('distance-display').innerText = dist.toFixed(1);
+            if (trackingMode !== 'gps') {
+                document.getElementById('distance-display').innerText = dist.toFixed(1);
+            }
             document.getElementById('telemetry-worker').innerText = w.worker_id;
             document.getElementById('telemetry-location').innerText = `${w.floor} — ${w.zone}`;
             document.getElementById('telemetry-accuracy').innerText = `± ${w.accuracy} m`;
