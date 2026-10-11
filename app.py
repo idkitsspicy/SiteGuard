@@ -24,7 +24,7 @@ engine = SafetyEngine("models/best.pt")
 
 # Master Platform State
 SITE_STATE = {
-    "site_name": "SITEGUARD 360 — Active Construction Site",
+    "site_name": "SITEGUARD 360 — Vasavi College of Engineering (Ibrahimbagh)",
     "site_safety_status": "WARNING", # SAFE, WARNING, CRITICAL
     "safety_score": 91,
     "active_workers_count": 32,
@@ -292,7 +292,7 @@ SITE_STATE = {
         }
     ],
 
-    # --- WORKER GPS SAFETY & EXPOSURE TRACKING ---
+    # --- WORKER GPS SAFETY & EXPOSURE TRACKING (VASAVI COLLEGE OF ENGINEERING, IBRAHIMBAGH) ---
     "gps_hazards": [
         {
             "id": "HAZ-101",
@@ -300,9 +300,9 @@ SITE_STATE = {
             "rule": "Site Rule 14 - Edge Guardrail Requirement",
             "floor": "Floor 2",
             "zone": "Zone B",
-            "location_name": "Floor 2 — Zone B / Zone D Ledge",
-            "lat": 37.774960,
-            "lng": -122.419340,
+            "location_name": "Vasavi Block A — Floor 2 Zone B Ledge",
+            "lat": 17.380820,
+            "lng": 78.382100,
             "danger_radius_m": 10.0,
             "warning_radius_m": 25.0,
             "risk": "CRITICAL"
@@ -313,9 +313,9 @@ SITE_STATE = {
             "rule": "OSHA 1926.451 - Scaffolding Safety",
             "floor": "Floor 2",
             "zone": "Zone C",
-            "location_name": "Floor 2 — Zone C Scaffold Hatch",
-            "lat": 37.775100,
-            "lng": -122.419100,
+            "location_name": "Vasavi Mechanical Bay — Scaffold Hatch",
+            "lat": 17.381020,
+            "lng": 78.382320,
             "danger_radius_m": 10.0,
             "warning_radius_m": 25.0,
             "risk": "HIGH"
@@ -326,9 +326,9 @@ SITE_STATE = {
             "rule": "Safety Spec 08 - Heavy Rigging Overhead Clearance",
             "floor": "Floor 3",
             "zone": "Zone D",
-            "location_name": "Floor 3 — Zone D Overhead Crane",
-            "lat": 37.774600,
-            "lng": -122.419700,
+            "location_name": "Vasavi Admin & Civil Block Crane",
+            "lat": 17.380550,
+            "lng": 78.381850,
             "danger_radius_m": 10.0,
             "warning_radius_m": 25.0,
             "risk": "CRITICAL"
@@ -339,9 +339,9 @@ SITE_STATE = {
             "rule": "OSHA 1926.651 - Excavation & Trenching Hazards",
             "floor": "Floor 1",
             "zone": "Zone D",
-            "location_name": "Floor 1 — Zone D Trench",
-            "lat": 37.775300,
-            "lng": -122.418800,
+            "location_name": "Vasavi West Perimeter Trench",
+            "lat": 17.381250,
+            "lng": 78.382580,
             "danger_radius_m": 10.0,
             "warning_radius_m": 25.0,
             "risk": "HIGH"
@@ -396,8 +396,8 @@ def update_worker_gps():
     if not worker_id:
         return jsonify({"error": "Worker ID is required"}), 400
         
-    lat = float(data.get("latitude", 37.774910))
-    lng = float(data.get("longitude", -122.419400))
+    lat = float(data.get("latitude", 17.380800))
+    lng = float(data.get("longitude", 78.382090))
     accuracy = float(data.get("accuracy", 3.8))
     floor = data.get("floor", "Floor 2")
     zone = data.get("zone", "Zone B")
@@ -565,8 +565,8 @@ def simulate_worker_move():
         new_lat = hz_lat - offset_deg
         new_lng = hz_lng - offset_deg
     else:
-        new_lat = 37.774920
-        new_lng = -122.419410
+        new_lat = 17.380800
+        new_lng = 78.382090
 
     req_payload = {
         "worker_id": worker_id,

@@ -607,11 +607,14 @@
                             <span>Live Coordinates:</span>
                             <span id="real-gps-coords" style="color:#fff; font-family:monospace; font-size:0.72rem;">-- , --</span>
                         </div>
-                        <button class="sim-btn sim-btn-warning" style="width:100%; margin-top:4px;" onclick="calibrateRealGpsAnchor()">
-                            <i class="fa-solid fa-bullseye"></i> Set Hazard 15m Ahead of My Location
+                        <button class="sim-btn sim-btn-safe" style="width:100%; margin-top:4px; font-weight:700;" onclick="lockToVasaviCampusAnchor()">
+                            <i class="fa-solid fa-building-columns"></i> Lock to Vasavi College Hazard (17.3808°N, 78.3821°E)
+                        </button>
+                        <button class="sim-btn sim-btn-warning" style="width:100%; margin-top:6px;" onclick="calibrateRealGpsAnchor()">
+                            <i class="fa-solid fa-bullseye"></i> Relative Test: Set Hazard 15m Ahead of Me
                         </button>
                         <div style="font-size:0.68rem; color:#94a3b8; margin-top:6px;">
-                            Physical walking will decrease your distance to the hazard in real-time.
+                            Tracks real physical distance to Vasavi College of Engineering, Ibrahimbagh.
                         </div>
                     </div>
 
@@ -668,9 +671,9 @@
         let patrolPauseTicks = 0;
         let patrolStep = 1.4;
 
-        // Real Phone GPS State
+        // Real Phone GPS State (Default: Vasavi College of Engineering, Ibrahimbagh)
         let realGpsWatchId = null;
-        let realGpsAnchor = null; // {lat, lng}
+        let realGpsAnchor = { lat: 17.380820, lng: 78.382100 };
         let latestRealCoords = null;
 
         function setTrackingMode(mode) {
@@ -782,6 +785,19 @@
                 navigator.geolocation.clearWatch(realGpsWatchId);
                 realGpsWatchId = null;
             }
+        }
+
+        function lockToVasaviCampusAnchor() {
+            realGpsAnchor = {
+                lat: 17.380820,
+                lng: 78.382100
+            };
+            if (latestRealCoords) {
+                const d = calculateGpsDistance(latestRealCoords.latitude, latestRealCoords.longitude, realGpsAnchor.lat, realGpsAnchor.lng);
+                currentSimDistance = Math.max(1.0, Math.min(999.0, d));
+                document.getElementById('distance-display').innerText = currentSimDistance.toFixed(1);
+            }
+            alert("Locked anchor to Vasavi College of Engineering (17.380820° N, 78.382100° E)!");
         }
 
         function calibrateRealGpsAnchor() {

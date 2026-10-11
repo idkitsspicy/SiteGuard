@@ -1785,7 +1785,7 @@ function drawRadarHUD() {
 
     ctx.fillStyle = "#fca5a5";
     ctx.font = "bold 10px Outfit, sans-serif";
-    ctx.fillText("HAZARD: OPEN LEDGE", cx, cy + 18);
+    ctx.fillText("VASAVI BLOCK A — FALL HAZARD", cx, cy + 18);
 
     // 2. Rotating Radar Sweep Beam
     if (isRadarSweepActive) {
