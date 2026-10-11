@@ -1,0 +1,23 @@
+# Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ultralytics & Training runs
+runs/
+*.pt.cache
+
+# Uploads & Temporary files
+static/uploads/*
+!static/uploads/.gitkeep
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

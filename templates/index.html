@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SITEGUARD 360 — Construction Site Command Center</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- App Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="theme-light">
+
+    <!-- Top Navigation / Header Command Bar -->
+    <header class="command-header">
+        <div class="header-left">
+            <div class="brand-logo">
+                <i class="fa-solid fa-shield-halved brand-icon" style="color:var(--brand-primary, #2563eb);"></i>
+                <div class="brand-text">
+                    <span class="brand-name">SITEGUARD <span class="brand-ai">360</span></span>
+                    <span class="brand-sub">Construction Site Safety Command Center</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-center">
+            <div class="site-status-pill warning" id="top-site-status">
+                <span class="pulse-dot"></span>
+                <span id="site-status-text">SITE: ACTIVE</span>
+            </div>
+            <div class="location-badge">
+                <i class="fa-solid fa-building"></i>
+                <span id="site-location-name">SITEGUARD 360 — Construction Site</span>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Theme">
+                <i class="fa-solid fa-sun" id="theme-icon-sun"></i>
+                <i class="fa-solid fa-moon" id="theme-icon-moon"></i>
+                <span id="theme-toggle-text">Light</span>
+            </button>
+
+            <a href="/worker-safety" target="_blank" class="btn" style="color:#ccc; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:11px; border-color:#444;">
+                <i class="fa-solid fa-mobile-screen-button"></i> Worker GPS
+            </a>
+
+            <button class="btn btn-demo" id="btn-start-demo-tour" onclick="startDemoStoryTour()">
+                <i class="fa-solid fa-play"></i>
+                <span>Demo Tour</span>
+            </button>
+
+            <div class="role-selector">
+                <label><i class="fa-solid fa-user-shield"></i> Role:</label>
+                <select id="user-role-select" onchange="switchRole(this.value)">
+                    <option value="Site Manager">Site Manager</option>
+                    <option value="Safety Officer" selected>Safety Officer</option>
+                    <option value="Site Supervisor">Site Supervisor</option>
+                </select>
+            </div>
+
+            <div class="sys-clock" id="live-clock">--:--:--</div>
+            <div class="connection-indicator online" title="YOLOv8 AI Engine Connected">
+                <i class="fa-solid fa-microchip"></i> YOLOv8
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs Bar -->
+    <nav class="nav-tabs-bar">
+        <div class="nav-tabs-container">
+            <button class="nav-tab active" data-tab="tab-dashboard" onclick="switchTab('tab-dashboard')">
+                <i class="fa-solid fa-gauge-high"></i> Command Center
+            </button>
+            <button class="nav-tab" data-tab="tab-gps-radar" onclick="switchTab('tab-gps-radar')">
+                <i class="fa-solid fa-satellite-dish"></i> GPS Exposure Radar
+            </button>
+            <button class="nav-tab" data-tab="tab-live-monitoring" onclick="switchTab('tab-live-monitoring')">
+                <i class="fa-solid fa-video"></i> Live Monitoring
+            </button>
+            <button class="nav-tab" data-tab="tab-site-map" onclick="switchTab('tab-site-map')">
+                <i class="fa-solid fa-map-location-dot"></i> Site Map
+            </button>
+            <button class="nav-tab" data-tab="tab-workers" onclick="switchTab('tab-workers')">
+                <i class="fa-solid fa-users-viewfinder"></i> Worker Profiles
+            </button>
+            <button class="nav-tab" data-tab="tab-hazards" onclick="switchTab('tab-hazards')">
+                <i class="fa-solid fa-triangle-exclamation"></i> Hazard Log
+            </button>
+            <button class="nav-tab" data-tab="tab-construction-progress" onclick="switchTab('tab-construction-progress')">
+                <i class="fa-solid fa-trowel-bricks"></i> Activity Progress
+            </button>
+            <button class="nav-tab" data-tab="tab-analytics" onclick="switchTab('tab-analytics')">
+                <i class="fa-solid fa-chart-pie"></i> Analytics
+            </button>
+            <button class="nav-tab" data-tab="tab-reports" onclick="switchTab('tab-reports')">
+                <i class="fa-solid fa-file-contract"></i> Reports
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Container / Views -->
+    <main class="main-content">
+
+        <!-- WORKER EXPOSED LIVE ALERT BANNER -->
+        <div class="worker-exposed-banner" id="live-exposed-worker-banner" style="display:none;">
+            <div class="banner-pulse-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+            <div class="banner-info">
+                <div class="banner-header-text">WORKER EXPOSED TO DANGER ZONE</div>
+                <div class="banner-sub-text">
+                    <span>Worker: <strong id="b-worker-name">--</strong></span>
+                    <span>Hazard: <strong id="b-hazard-name">--</strong></span>
+                    <span>Floor: <strong id="b-floor">--</strong></span>
+                    <span>Zone: <strong id="b-zone">--</strong></span>
+                    <span>Distance: <strong id="b-distance">--</strong></span>
+                    <span>Exposure: <strong id="b-exposure-duration" class="exposure-timer-badge">--</strong></span>
+                </div>
+            </div>
+            <div class="banner-btn-box">
+                <button class="btn btn-sm" onclick="switchTab('tab-gps-radar')">
+                    <i class="fa-solid fa-satellite-dish"></i> GPS Radar
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 1: MAIN DASHBOARD ==================== -->
+        <section id="tab-dashboard" class="tab-view active">
+            <!-- Dynamic Role Perspective Ribbon -->
+            <div class="role-perspective-banner role-safety-officer" id="role-perspective-banner">
+                <div class="role-ribbon-left">
+                    <span class="role-badge-pill safety-officer" id="role-badge-pill">
+                        <i class="fa-solid fa-user-shield"></i> <span id="role-badge-name">Safety Officer</span>
+                    </span>
+                    <div class="role-ribbon-text">
+                        <span class="role-ribbon-title" id="role-ribbon-title">OSHA PPE Compliance & Hazard Remediation</span>
+                        <span class="role-ribbon-desc" id="role-ribbon-desc">Monitoring live video streams, PPE non-compliance, and immediate danger zone exposures.</span>
+                    </div>
+                </div>
+                <div class="role-ribbon-actions" id="role-ribbon-actions"></div>
+            </div>
+
+            <!-- Top KPI Cards Row -->
+            <div class="kpi-grid">
+                <div class="kpi-card danger">
+                    <div class="kpi-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-title">Site Safety Status</span>
+                        <span class="kpi-value text-warning" id="kpi-safety-status">--</span>
+                        <span class="kpi-subtitle">Safety Score: <strong id="kpi-safety-score">--%</strong></span>
+                    </div>
+                </div>
+
+                <div class="kpi-card cyan">
+                    <div class="kpi-icon"><i class="fa-solid fa-user-gear"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-title">Active Workers</span>
+                        <span class="kpi-value" id="kpi-workers-count">--</span>
+                        <span class="kpi-subtitle" id="kpi-workers-subtitle">On-Site Workforce</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card orange">
+                    <div class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-title">Active Hazards</span>
+                        <span class="kpi-value text-orange" id="kpi-hazards-count">--</span>
+                        <span class="kpi-subtitle"><strong id="kpi-high-risk-count">0</strong> High-Risk</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card green">
+                    <div class="kpi-icon"><i class="fa-solid fa-chart-line"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-title">Project Progress</span>
+                        <span class="kpi-value text-green" id="kpi-progress-pct">--</span>
+                        <span class="kpi-subtitle" id="kpi-progress-subtitle">Overall Site Activity</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid Layout -->
+            <div class="dashboard-grid">
+                <div class="dash-col main-panel">
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-eye"></i> Live Camera Feed</h3>
+                            <div class="panel-actions">
+                                <span class="badge badge-live"><i class="fa-solid fa-circle"></i> LIVE</span>
+                                <button class="btn btn-sm btn-outline" onclick="switchTab('tab-live-monitoring')">Expand <i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                            </div>
+                        </div>
+                        <div class="panel-body video-preview-container">
+                            <div class="video-overlay-banner alert-banner" id="dash-camera-alert-banner" style="display:none;">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span id="dash-camera-alert-text"><strong>ALERT:</strong> Active Hazard Detected</span>
+                            </div>
+                            <img id="dash-live-video-stream" src="/api/video-feed/CAM-01" class="live-stream-img" alt="Live Camera Stream">
+                        </div>
+                    </div>
+
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-list-check"></i> Construction Activity</h3>
+                            <button class="btn btn-sm btn-outline" onclick="switchTab('tab-construction-progress')">Details <i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                        <div class="panel-body">
+                            <div class="floor-progress-list" id="dash-floor-progress-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-col side-panel">
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-bell"></i> Alerts</h3>
+                            <span class="badge badge-count" id="dash-alerts-count">3 Active</span>
+                        </div>
+                        <div class="panel-body scrollable-panel">
+                            <div class="alerts-feed" id="dash-alerts-feed"></div>
+                        </div>
+                    </div>
+
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-user-tag"></i> Worker Watchlist</h3>
+                            <button class="btn btn-sm btn-outline" onclick="switchTab('tab-workers')">All <i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                        <div class="panel-body">
+                            <div class="worker-watchlist" id="dash-worker-watchlist"></div>
+                        </div>
+                    </div>
+
+                    <!-- Role Specialty Panel -->
+                    <div class="panel-card mt-3" id="role-specialty-card">
+                        <div class="panel-header">
+                            <h3 id="role-specialty-title"><i class="fa-solid fa-user-shield"></i> Role Specialty Focus</h3>
+                            <span class="badge badge-count" id="role-specialty-badge">Active Mode</span>
+                        </div>
+                        <div class="panel-body" id="role-specialty-body"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: LIVE MONITORING ==================== -->
+        <section id="tab-live-monitoring" class="tab-view">
+            <div class="monitoring-layout">
+                <div class="monitoring-sidebar">
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-video"></i> Cameras</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="camera-list" id="camera-select-list"></div>
+
+                            <hr class="divider">
+
+                            <div class="upload-custom-section">
+                                <h4><i class="fa-solid fa-upload"></i> Upload Footage</h4>
+                                <p class="help-text">Upload video or image for AI safety detection.</p>
+                                <input type="file" id="custom-image-input" accept="image/*,video/*" style="display:none;" onchange="handleMediaUpload(event)">
+                                <button class="btn btn-outline btn-block" onclick="document.getElementById('custom-image-input').click()">
+                                    <i class="fa-solid fa-file-video"></i> Upload Video / Image
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-card mt-3">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-gavel"></i> Safety Rules</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="rules-eval-box" id="active-rules-box">
+                                <div class="rule-eval-item high">
+                                    <span class="rule-icon"><i class="fa-solid fa-hard-hat"></i></span>
+                                    <div class="rule-det">
+                                        <strong>Worker + Helmet Missing</strong>
+                                        <span class="text-red">HIGH RISK (PPE Violation)</span>
+                                    </div>
+                                </div>
+                                <div class="rule-eval-item critical">
+                                    <span class="rule-icon"><i class="fa-solid fa-person-falling"></i></span>
+                                    <div class="rule-det">
+                                        <strong>Worker + Open Ledge</strong>
+                                        <span class="text-red">CRITICAL RISK (Fall Hazard)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="monitoring-main">
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <div class="cam-info-title">
+                                <h3 id="current-camera-title"><i class="fa-solid fa-camera"></i> Camera 01 — Floor 2 Zone D</h3>
+                                <span class="location-tag" id="current-camera-location">Floor 2 — Zone D</span>
+                            </div>
+                            <div class="cam-controls">
+                                <span class="badge badge-risk-high" id="current-cam-risk-badge">HIGH</span>
+                            </div>
+                        </div>
+                        <div class="panel-body video-main-container">
+                            <div class="hud-overlay" id="video-hud-overlay">
+                                <div class="hud-top-left">
+                                    <span class="rec-dot"></span> <strong>LIVE</strong> | FPS: 25
+                                </div>
+                                <div class="hud-top-right">
+                                    <span>YOLOv8 best.pt</span>
+                                </div>
+                            </div>
+                            <img id="live-camera-stream-img" src="/api/video-feed/CAM-01" class="live-stream-main" alt="Live Camera Feed">
+                        </div>
+                    </div>
+
+                    <div class="monitoring-telemetry-grid mt-3">
+                        <div class="panel-card">
+                            <div class="panel-header">
+                                <h3><i class="fa-solid fa-id-card"></i> Worker Telemetry</h3>
+                            </div>
+                            <div class="panel-body">
+                                <div class="worker-telemetry-cards" id="live-worker-telemetry"></div>
+                            </div>
+                        </div>
+
+                        <div class="panel-card">
+                            <div class="panel-header">
+                                <h3><i class="fa-solid fa-cubes-stacked"></i> YOLO Detections</h3>
+                            </div>
+                            <div class="panel-body">
+                                <div class="raw-detections-list" id="raw-detections-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: INTERACTIVE SITE MAP ==================== -->
+        <section id="tab-site-map" class="tab-view">
+            <div class="site-map-container panel-card">
+                <div class="panel-header">
+                    <div class="map-title">
+                        <h3><i class="fa-solid fa-map-location-dot"></i> Site Map & Floor Matrix</h3>
+                        <p class="subtitle">Floor zones, worker positions, hazard areas, and blueprint analysis.</p>
+                    </div>
+                    <div class="map-header-actions">
+                        <input type="file" id="blueprint-file-input" accept="image/*" style="display:none;" onchange="handleBlueprintUpload(event)">
+                        <button class="btn btn-primary" onclick="document.getElementById('blueprint-file-input').click()" title="Upload Floor Plan Blueprint">
+                            <i class="fa-solid fa-drafting-compass"></i> Upload Floor Plan
+                        </button>
+                        <button class="btn btn-outline" id="btn-toggle-blueprint-view" onclick="toggleFloorPlanView()" style="display:none;">
+                            <i class="fa-solid fa-layer-group"></i> Toggle View
+                        </button>
+                        <button class="btn btn-outline" id="btn-reset-blueprint" onclick="resetFloorPlan()" style="display:none;">
+                            <i class="fa-solid fa-rotate-left"></i> Reset
+                        </button>
+                        <div class="map-floor-selector">
+                            <label>Floor:</label>
+                            <select id="map-floor-select" onchange="renderSiteMap(this.value)">
+                                <option value="Floor 2" selected>Floor 2 (Active)</option>
+                                <option value="Floor 1">Floor 1 (Ground)</option>
+                                <option value="Floor 3">Floor 3 (Crane)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-body map-layout-wrapper">
+                    <div class="interactive-map-surface" id="interactive-map-surface"></div>
+
+                    <div class="map-sidebar">
+                        <div class="map-legend-box">
+                            <h4>Legend</h4>
+                            <div class="legend-item"><span class="color-box safe"></span> Safe Zone</div>
+                            <div class="legend-item"><span class="color-box warning"></span> Warning Zone</div>
+                            <div class="legend-item"><span class="color-box high"></span> High-Risk Zone</div>
+                            <div class="legend-item"><span class="color-box danger"></span> Danger Zone</div>
+                            <div class="legend-item"><span class="worker-pin-demo">W08</span> Worker Pin</div>
+                        </div>
+
+                        <div class="panel-card" id="blueprint-analysis-card" style="display:none;">
+                            <div class="panel-header" style="padding:10px 14px;">
+                                <h4 style="font-size:12px;"><i class="fa-solid fa-brain"></i> Floor Plan Analysis</h4>
+                            </div>
+                            <div class="panel-body" id="blueprint-analysis-body" style="padding:12px; font-size:11px;"></div>
+                        </div>
+
+                        <div class="zone-details-box mt-3" id="zone-details-drawer">
+                            <h4 id="drawer-zone-title"><i class="fa-solid fa-vector-square"></i> Select a Zone</h4>
+                            <p class="help-text">Click on any zone or worker pin to view details.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: WORKER SAFETY PROFILES ==================== -->
+        <section id="tab-workers" class="tab-view">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h3><i class="fa-solid fa-users-viewfinder"></i> Worker Safety Roster</h3>
+                    <div class="table-search">
+                        <input type="text" id="worker-search-input" placeholder="Search worker..." onkeyup="filterWorkerTable()">
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="table-responsive">
+                        <table class="custom-table" id="workers-roster-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Location</th>
+                                    <th>PPE Status</th>
+                                    <th>Risk</th>
+                                    <th>Violations</th>
+                                    <th>History</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workers-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 5: HAZARD HISTORY ==================== -->
+        <section id="tab-hazards" class="tab-view">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h3><i class="fa-solid fa-triangle-exclamation"></i> Hazard Log</h3>
+                    <div class="table-filters">
+                        <select id="hazard-status-filter" onchange="filterHazardsTable()">
+                            <option value="ALL" selected>All Statuses</option>
+                            <option value="Active">Active</option>
+                            <option value="Acknowledged">Acknowledged</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                        <select id="hazard-risk-filter" onchange="filterHazardsTable()">
+                            <option value="ALL">All Risk</option>
+                            <option value="HIGH">High / Critical</option>
+                            <option value="WARNING">Warning</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="table-responsive">
+                        <table class="custom-table" id="hazards-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Worker</th>
+                                    <th>Issue</th>
+                                    <th>Rule</th>
+                                    <th>Location</th>
+                                    <th>Risk</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hazards-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 6: CONSTRUCTION ACTIVITY ==================== -->
+        <section id="tab-construction-progress" class="tab-view">
+            <div class="activity-module-grid">
+                <div class="panel-card main-activity-card">
+                    <div class="panel-header">
+                        <div>
+                            <h3><i class="fa-solid fa-trowel-bricks"></i> Activity Matrix</h3>
+                            <p class="subtitle">Columns, Beams, Slabs, Masonry per floor.</p>
+                        </div>
+                        <div class="overall-progress-pill">
+                            Overall: <strong id="activity-overall-pct">67%</strong>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="floors-matrix-container" id="floors-matrix-container"></div>
+                    </div>
+                </div>
+
+                <div class="panel-card side-activity-card">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-robot"></i> AI Observations</h3>
+                        <span class="badge badge-info">Needs Confirmation</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="observations-list" id="ai-observations-list"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 7: ANALYTICS ==================== -->
+        <section id="tab-analytics" class="tab-view">
+            <div class="analytics-grid">
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-chart-line"></i> PPE Compliance</h3>
+                    </div>
+                    <div class="panel-body chart-container">
+                        <div id="chart-ppe-compliance" class="custom-chart-box"></div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-chart-pie"></i> Hazards by Category</h3>
+                    </div>
+                    <div class="panel-body chart-container">
+                        <div id="chart-hazards-category" class="custom-chart-box"></div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-chart-bar"></i> Hazards by Floor</h3>
+                    </div>
+                    <div class="panel-body chart-container">
+                        <div id="chart-hazards-zone" class="custom-chart-box"></div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-shield-halved"></i> Resolution Rate</h3>
+                    </div>
+                    <div class="panel-body chart-container">
+                        <div id="chart-resolution-rate" class="custom-chart-box"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 8: REPORTS ==================== -->
+        <section id="tab-reports" class="tab-view">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div>
+                        <h3><i class="fa-solid fa-file-contract"></i> Site Safety Report</h3>
+                        <p class="subtitle">Safety metrics, PPE compliance, and activity progress.</p>
+                    </div>
+                    <div class="report-actions">
+                        <button class="btn btn-primary" onclick="window.print()">
+                            <i class="fa-solid fa-print"></i> Print
+                        </button>
+                        <button class="btn btn-outline" onclick="downloadJSONReport()">
+                            <i class="fa-solid fa-download"></i> Export JSON
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="report-preview-paper" id="report-printable-area"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB: GPS SAFETY RADAR ==================== -->
+        <section id="tab-gps-radar" class="tab-view">
+            <div class="kpi-grid">
+                <div class="kpi-card danger">
+                    <div class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-title">Exposed Workers</span>
+                        <span class="kpi-value text-danger" id="gps-kpi-exposed-count">--</span>
+                        <span class="kpi-subtitle">Critical Proximity (&lt; 10m)</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card cyan">
+                    <div class="kpi-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-title">Active GPS Devices</span>
+                        <span class="kpi-value" id="gps-kpi-active-devices">--</span>
+                        <span class="kpi-subtitle">Transmitting Every 2s</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card orange">
+                    <div class="kpi-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-title">Hazard Zones</span>
+                        <span class="kpi-value text-orange" id="gps-kpi-hazards-count">--</span>
+                        <span class="kpi-subtitle">10m Danger / 25m Warning</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card green">
+                    <div class="kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-title">Exposure Events</span>
+                        <span class="kpi-value text-green" id="gps-kpi-events-count">--</span>
+                        <span class="kpi-subtitle">Auto Entry & Exit Tracked</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="dash-col main-panel" style="flex:2;">
+                    <div class="panel">
+                        <div class="panel-header" style="justify-content: space-between;">
+                            <div>
+                                <h3><i class="fa-solid fa-satellite-dish"></i> GPS Proximity Grid</h3>
+                                <p class="subtitle">Live position telemetry & distance to hazards.</p>
+                            </div>
+                            <a href="/worker-safety" target="_blank" class="btn btn-sm btn-primary">
+                                <i class="fa-solid fa-mobile-screen-button"></i> Mobile Worker
+                            </a>
+                        </div>
+                        <div class="panel-body">
+                            <div class="gps-workers-grid" id="gps-workers-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-col side-panel" style="flex:1;">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-sliders"></i> Proximity Simulator</h3>
+                        </div>
+                        <div class="panel-body">
+                            <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">
+                                Simulate worker movement to test alerts & exposure tracking.
+                            </p>
+
+                            <div class="form-group" style="margin-bottom:10px;">
+                                <label style="font-size:0.78rem; font-weight:600;">Target Worker</label>
+                                <select id="sim-worker-select" class="form-control">
+                                    <option value="W024">W024 (Rachel W. - Carpenter)</option>
+                                    <option value="W008">W008 (David R. - Steel Fixer)</option>
+                                    <option value="W012">W012 (Sarah T. - Inspector)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom:12px;">
+                                <label style="font-size:0.78rem; font-weight:600;">Distance from Hazard</label>
+                                <input type="range" min="1" max="40" step="0.5" value="6.8" class="sim-slider" id="dash-sim-slider" oninput="onDashSimSliderChange(this.value)">
+                                <div style="display:flex; justify-content:space-between; margin-top:4px; font-weight:600; font-size:0.85rem;">
+                                    <span>Distance:</span>
+                                    <span id="dash-sim-dist-text">6.8 m</span>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                <button class="btn btn-sm btn-danger" onclick="triggerDashSimPreset(4.5)" style="justify-content:center;">
+                                    4.5m Danger Zone
+                                </button>
+                                <button class="btn btn-sm btn-warning" onclick="triggerDashSimPreset(15.0)" style="justify-content:center;">
+                                    15.0m Warning Radius
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="triggerDashSimPreset(32.0)" style="justify-content:center;">
+                                    32.0m Safe Area
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel mt-4">
+                <div class="panel-header" style="justify-content: space-between;">
+                    <div>
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Exposure Event Log</h3>
+                        <p class="subtitle">Entry, alert, exit time and total exposure per event.</p>
+                    </div>
+                    <span class="badge badge-warning" id="exposure-active-badge">1 Active</span>
+                </div>
+                <div class="panel-body table-responsive">
+                    <table class="data-table" id="exposure-events-table">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Worker</th>
+                                <th>Hazard</th>
+                                <th>Location</th>
+                                <th>Risk</th>
+                                <th>Entry</th>
+                                <th>Exit</th>
+                                <th>Dist</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exposure-events-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Worker Profile Modal -->
+    <div class="modal-backdrop" id="worker-modal" style="display:none;">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="modal-worker-name">Worker Profile</h3>
+                <button class="modal-close" onclick="closeWorkerModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-worker-content"></div>
+        </div>
+    </div>
+
+    <!-- Hazard Action Modal -->
+    <div class="modal-backdrop" id="hazard-action-modal" style="display:none;">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="hazard-modal-title">Manage Hazard</h3>
+                <button class="modal-close" onclick="closeHazardModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="hazard-modal-det"></div>
+                <div class="form-group mt-3">
+                    <label>Notes:</label>
+                    <textarea id="hazard-notes-input" class="form-control" rows="3" placeholder="Enter resolution steps..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeHazardModal()">Cancel</button>
+                <button class="btn btn-warning" id="btn-modal-ack" onclick="submitHazardAction('Acknowledged')">Acknowledge</button>
+                <button class="btn btn-success" id="btn-modal-resolve" onclick="submitHazardAction('Resolved')">Resolve</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo Tour Banner -->
+    <div class="demo-tour-banner" id="demo-tour-banner" style="display:none;">
+        <div class="tour-header">
+            <span class="tour-badge">DEMO TOUR</span>
+            <span class="tour-step-counter" id="tour-step-counter">Step 1 of 7</span>
+            <button class="tour-close-btn" onclick="stopDemoStoryTour()">&times;</button>
+        </div>
+        <div class="tour-body">
+            <h4 id="tour-step-title">Step 1: Dashboard</h4>
+            <p id="tour-step-text">Overview of site safety metrics.</p>
+        </div>
+        <div class="tour-footer">
+            <button class="btn btn-sm btn-secondary" onclick="prevDemoStep()"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+            <button class="btn btn-sm btn-primary" onclick="nextDemoStep()">Next <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

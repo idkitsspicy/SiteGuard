@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SITEGUARD 360 — Mobile Worker Safety Mode</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --accent-green: #22c55e;
+            --accent-yellow: #eab308;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding-bottom: 20px;
+        }
+
+        /* Top Header */
+        .mobile-header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            font-size: 1.5rem;
+            color: #f59e0b;
+        }
+
+        .brand-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-sub {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .live-tag {
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            animation: pulse-green 1.5s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* Container */
+        .container {
+            padding: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Setup Form Card */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #e2e8f0;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 14px;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .preset-pills {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .preset-btn {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .preset-btn:hover, .preset-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #fff;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 800;
+            font-size: 1.05rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Safety Status Monitor Display */
+        .status-display-card {
+            background: #0f172a;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-badge-lg {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge-lg.safe {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 2px solid #22c55e;
+        }
+
+        .status-badge-lg.warning {
+            background: rgba(234, 179, 8, 0.2);
+            color: #fde047;
+            border: 2px solid #eab308;
+        }
+
+        .status-badge-lg.critical {
+            background: rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            border: 2px solid #ef4444;
+            animation: pulse-red-border 1s infinite alternate;
+        }
+
+        @keyframes pulse-red-border {
+            0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+            100% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); }
+        }
+
+        .distance-highlight {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 10px 0;
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .distance-unit {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 16px;
+            text-align: left;
+        }
+
+        .telemetry-item {
+            background: #1e293b;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .telemetry-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+
+        }
+
+        .telemetry-val {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-top: 2px;
+        }
+
+        /* Simulator Slider Section */
+        .simulator-box {
+            background: #1e293b;
+            border: 1px dashed #3b82f6;
+            border-radius: 14px;
+            padding: 14px;
+            margin-top: 16px;
+        }
+
+        .sim-header {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .sim-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #0f172a;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .sim-presets {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .sim-btn {
+            flex: 1;
+            padding: 8px 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .sim-btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
+        .sim-btn-warning { background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid #eab308; }
+        .sim-btn-safe { background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid #22c55e; }
+
+        /* Full Screen Warning Alert Modal */
+        .danger-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            animation: flash-bg 0.8s infinite alternate;
+        }
+
+        @keyframes flash-bg {
+            0% { background-color: rgba(185, 28, 28, 0.96); }
+            100% { background-color: rgba(15, 23, 42, 0.98); }
+        }
+
+        .alert-card-modal {
+            background: #0f172a;
+            border: 3px solid #ef4444;
+            border-radius: 24px;
+            padding: 28px 20px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 0 50px rgba(239, 68, 68, 0.8);
+        }
+
+        .alert-siren-icon {
+            font-size: 4rem;
+            color: #ef4444;
+            animation: pulse-icon 0.6s infinite alternate;
+            margin-bottom: 16px;
+        }
+
+        @keyframes pulse-icon {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.2); color: #ff8888; }
+        }
+
+        .alert-title-lg {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .alert-hazard-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fde047;
+            margin-bottom: 16px;
+        }
+
+        .alert-dist-box {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            border-radius: 14px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        .alert-dist-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .instruction-banner {
+            background: #ef4444;
+            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 800;
+            padding: 14px;
+            border-radius: 14px;
+            letter-spacing: 0.5px;
+            animation: pulse-banner 1s infinite alternate;
+        }
+
+        @keyframes pulse-banner {
+            0% { transform: scale(0.98); }
+            100% { transform: scale(1.02); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="mobile-header">
+        <div class="brand-box">
+            <i class="fa-solid fa-hard-hat brand-icon"></i>
+            <div>
+                <span class="brand-title">SITEGUARD 360</span>
+                <span class="brand-sub">Worker Mobile Safety Device</span>
+            </div>
+        </div>
+        <div class="live-tag" id="live-indicator">
+            <span class="pulse-dot"></span>
+            <span id="gps-status-label">READY</span>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Worker Device Setup -->
+        <div class="card" id="setup-card">
+            <div class="card-title">
+                <i class="fa-solid fa-mobile-screen-button" style="color:#3b82f6;"></i>
+                Safety Device Configuration
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Worker ID</label>
+                <input type="text" id="worker-id-input" class="form-control" value="W024" placeholder="Enter Worker ID (e.g. W024)">
+                <div class="preset-pills">
+                    <button class="preset-btn active" onclick="setWorkerId('W024')">W024 (Rachel)</button>
+                    <button class="preset-btn" onclick="setWorkerId('W008')">W008 (David)</button>
+                    <button class="preset-btn" onclick="setWorkerId('W012')">W012 (Sarah)</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Assigned Construction Floor</label>
+                <select id="floor-select" class="form-control">
+                    <option value="Floor 2" selected>Floor 2 (Structural Bay & Beam Grid)</option>
+                    <option value="Floor 1">Floor 1 (Ground Level & Staging)</option>
+                    <option value="Floor 3">Floor 3 (Concrete Deck & Crane Zone)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Active Work Zone</label>
+                <select id="zone-select" class="form-control">
+                    <option value="Zone B" selected>Zone B — Beam Construction Grid</option>
+                    <option value="Zone A">Zone A — Core & Assembly Area</option>
+                    <option value="Zone C">Zone C — Scaffolding & Material Corridor</option>
+                    <option value="Zone D">Zone D — Open Slab Ledge / Crane Zone</option>
+                </select>
+            </div>
+
+            <button class="btn-action btn-start" id="btn-toggle-safety" onclick="toggleSafetyMode()">
+                <i class="fa-solid fa-play"></i> START SAFETY MODE
+            </button>
+        </div>
+
+        <!-- Real-Time Safety Status Card -->
+        <div class="card">
+            <div class="card-title" style="justify-content: space-between;">
+                <span><i class="fa-solid fa-satellite-dish"></i> Live Proximity Monitor</span>
+                <span id="update-timer" style="font-size:0.75rem; color:#94a3b8;">Interval: 2s</span>
+            </div>
+
+            <div class="status-display-card" id="status-card-box">
+                <div class="status-badge-lg safe" id="status-badge">
+                    <i class="fa-solid fa-shield-halved"></i> <span>SAFE</span>
+                </div>
+
+                <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">
+                    Distance to Nearest Hazard
+                </div>
+                <div class="distance-highlight">
+                    <span id="distance-display">35.0</span>
+                    <span class="distance-unit">meters</span>
+                </div>
+
+                <div id="hazard-detected-name" style="font-size:0.9rem; font-weight:700; color:#cbd5e1; margin-top:4px;">
+                    Nearest: Open Edge / Unprotected Ledge
+                </div>
+
+                <div class="telemetry-grid">
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">Worker ID</div>
+                        <div class="telemetry-val" id="telemetry-worker">W024</div>
+                    </div>
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">Location</div>
+                        <div class="telemetry-val" id="telemetry-location">Floor 2 — Zone B</div>
+                    </div>
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">GPS Accuracy</div>
+                        <div class="telemetry-val" id="telemetry-accuracy">± 3.5 m</div>
+                    </div>
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">Safety Status</div>
+                        <div class="telemetry-val" id="telemetry-status-text" style="color:#4ade80;">SAFE</div>
+                    </div>
+                </div>
+
+                <!-- Distance Simulator for Testing -->
+                <div class="simulator-box">
+                    <div class="sim-header">
+                        <span><i class="fa-solid fa-sliders"></i> Proximity Simulator (Test Distance)</span>
+                        <span id="sim-dist-val" style="color:#fff; font-weight:800;">6.8 m</span>
+                    </div>
+                    <input type="range" min="1" max="40" step="0.5" value="6.8" class="sim-slider" id="sim-slider" oninput="onSimSliderChange(this.value)">
+                    <div class="sim-presets">
+                        <button class="sim-btn sim-btn-danger" onclick="setSimDistance(4.5)">4.5m Danger</button>
+                        <button class="sim-btn sim-btn-warning" onclick="setSimDistance(15.0)">15m Warning</button>
+                        <button class="sim-btn sim-btn-safe" onclick="setSimDistance(32.0)">32m Safe</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Full-Screen Visual Warning Overlay -->
+    <div class="danger-overlay" id="danger-modal-overlay" style="display: none;">
+        <div class="alert-card-modal">
+            <i class="fa-solid fa-triangle-exclamation alert-siren-icon"></i>
+            <div class="alert-title-lg">CRITICAL DANGER ZONE</div>
+            <div class="alert-hazard-name" id="alert-hazard-name">Open Edge / Unprotected Ledge</div>
+            
+            <div class="alert-dist-box">
+                <div style="font-size:0.8rem; color:#fca5a5; font-weight:700; text-transform:uppercase;">Distance to Fall Hazard</div>
+                <div class="alert-dist-val" id="alert-dist-val">6.8 m</div>
+                <div style="font-size:0.85rem; color:#cbd5e1; margin-top:4px;" id="alert-location-val">Floor 2 — Zone B</div>
+            </div>
+
+            <div class="instruction-banner">
+                <i class="fa-solid fa-person-walking-arrow-loop-left"></i> MOVE TO A SAFE AREA IMMEDIATELY
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isSafetyActive = false;
+        let trackingInterval = null;
+        let audioCtx = null;
+        let alarmBeepInterval = null;
+        let currentWorkerId = "W024";
+        let currentSimDistance = 6.8;
+
+        function setWorkerId(id) {
+            currentWorkerId = id;
+            document.getElementById('worker-id-input').value = id;
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.includes(id));
+            });
+            if (isSafetyActive) sendTelemetry();
+        }
+
+        function toggleSafetyMode() {
+            isSafetyActive = !isSafetyActive;
+            const btn = document.getElementById('btn-toggle-safety');
+            const liveLabel = document.getElementById('gps-status-label');
+
+            if (isSafetyActive) {
+                btn.className = "btn-action btn-stop";
+                btn.innerHTML = `<i class="fa-solid fa-stop"></i> STOP SAFETY MODE`;
+                liveLabel.innerText = "LIVE GPS ON";
+
+                // Trigger initial telemetry & set 2s interval
+                sendTelemetry();
+                trackingInterval = setInterval(sendTelemetry, 2000);
+
+                // Request browser location if available
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        pos => console.log("[GPS] Real Location Acquired:", pos.coords),
+                        err => console.warn("[GPS] Using simulated spatial coordinates:", err.message),
+                        { enableHighAccuracy: true }
+                    );
+                }
+            } else {
+                btn.className = "btn-action btn-start";
+                btn.innerHTML = `<i class="fa-solid fa-play"></i> START SAFETY MODE`;
+                liveLabel.innerText = "READY";
+                if (trackingInterval) clearInterval(trackingInterval);
+                stopAlarmSound();
+                hideDangerOverlay();
+            }
+        }
+
+        function onSimSliderChange(val) {
+            currentSimDistance = parseFloat(val);
+            document.getElementById('sim-dist-val').innerText = currentSimDistance.toFixed(1) + " m";
+            if (isSafetyActive) sendTelemetry();
+        }
+
+        function setSimDistance(val) {
+            document.getElementById('sim-slider').value = val;
+            onSimSliderChange(val);
+        }
+
+        async function sendTelemetry() {
+            currentWorkerId = document.getElementById('worker-id-input').value.trim().toUpperCase() || "W024";
+            const floor = document.getElementById('floor-select').value;
+            const zone = document.getElementById('zone-select').value;
+
+            try {
+                const response = await fetch('/api/gps/simulate-move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        worker_id: currentWorkerId,
+                        distance_m: currentSimDistance,
+                        floor: floor,
+                        zone: zone
+                    })
+                });
+
+                if (!response.ok) return;
+                const data = await response.json();
+                updateUI(data);
+
+            } catch (err) {
+                console.error("[GPS] Telemetry Error:", err);
+            }
+        }
+
+        function updateUI(data) {
+            if (!data.worker) return;
+
+            const w = data.worker;
+            const dist = w.distance_m;
+            const status = w.safety_status;
+
+            document.getElementById('distance-display').innerText = dist.toFixed(1);
+            document.getElementById('telemetry-worker').innerText = w.worker_id;
+            document.getElementById('telemetry-location').innerText = `${w.floor} — ${w.zone}`;
+            document.getElementById('telemetry-accuracy').innerText = `± ${w.accuracy} m`;
+            document.getElementById('hazard-detected-name').innerText = `Nearest: ${w.nearest_hazard}`;
+
+            const badge = document.getElementById('status-badge');
+            const statusTxt = document.getElementById('telemetry-status-text');
+
+            if (status === 'CRITICAL') {
+                badge.className = "status-badge-lg critical";
+                badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> CRITICAL — DANGER ZONE`;
+                statusTxt.innerText = "CRITICAL";
+                statusTxt.style.color = "#ef4444";
+
+                // Trigger Mobile Alerts
+                showDangerOverlay(w);
+                startAlarmSound();
+                triggerVibration();
+            } else if (status === 'WARNING') {
+                badge.className = "status-badge-lg warning";
+                badge.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> WARNING — HAZARD NEARBY`;
+                statusTxt.innerText = "WARNING";
+                statusTxt.style.color = "#fde047";
+
+                stopAlarmSound();
+                hideDangerOverlay();
+            } else {
+                badge.className = "status-badge-lg safe";
+                badge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> SAFE`;
+                statusTxt.innerText = "SAFE";
+                statusTxt.style.color = "#4ade80";
+
+                stopAlarmSound();
+                hideDangerOverlay();
+            }
+        }
+
+        function showDangerOverlay(w) {
+            const overlay = document.getElementById('danger-modal-overlay');
+            document.getElementById('alert-hazard-name').innerText = w.nearest_hazard;
+            document.getElementById('alert-dist-val').innerText = `${w.distance_m.toFixed(1)} m`;
+            document.getElementById('alert-location-val').innerText = `${w.floor} — ${w.zone}`;
+            overlay.style.display = "flex";
+        }
+
+        function hideDangerOverlay() {
+            document.getElementById('danger-modal-overlay').style.display = "none";
+        }
+
+        function triggerVibration() {
+            if (navigator.vibrate) {
+                navigator.vibrate([500, 200, 500, 200]);
+            }
+        }
+
+        function startAlarmSound() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (alarmBeepInterval || !audioCtx) return;
+
+            alarmBeepInterval = setInterval(() => {
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                } catch(e){}
+            }, 600);
+        }
+
+        function stopAlarmSound() {
+            if (alarmBeepInterval) {
+                clearInterval(alarmBeepInterval);
+                alarmBeepInterval = null;
+            }
+        }
+
+        // Ready state on load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log("[Worker Device] Safety Page Loaded. Ready for Start.");
+        });
+    </script>
+</body>
+</html>
