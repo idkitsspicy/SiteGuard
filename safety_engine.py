@@ -49,7 +49,8 @@ class SafetyEngine:
         else:
             print(f"[SafetyEngine] Model file {self.model_path} not found.")
 
-        if os.path.exists(self.fallback_model_path):
+        # Only load fallback model if primary model failed or not found
+        if not self.model and os.path.exists(self.fallback_model_path):
             try:
                 self.fallback_model = YOLO(self.fallback_model_path)
                 print(f"[SafetyEngine] Fallback model loaded from {self.fallback_model_path}")
