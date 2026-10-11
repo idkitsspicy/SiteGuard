@@ -901,7 +901,9 @@ def process_image():
     cam_id = data.get("camera_id", "CAM-01")
     
     cam = next((c for c in SITE_STATE["cameras"] if c["id"] == cam_id), SITE_STATE["cameras"][0])
-    img_path = cam["source"]
+    img_path = cam.get("source", "")
+    if img_path and not os.path.isabs(img_path):
+        img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), img_path)
     frame = None
     
     if "image_b64" in data and data["image_b64"]:
@@ -954,7 +956,10 @@ def video_feed(camera_id):
     # Generates optimized MJPEG video stream with real-time detection overlay
     def generate():
         cam = next((c for c in SITE_STATE["cameras"] if c["id"] == camera_id), SITE_STATE["cameras"][0])
-        src = cam["source"]
+        src = cam.get("source", "")
+        if src and not os.path.isabs(src):
+            src = os.path.join(os.path.dirname(os.path.abspath(__file__)), src)
+
         video_exts = ('.mp4', '.avi', '.mov', '.webm', '.mkv', '.m4v')
         is_video = src and any(src.lower().endswith(ext) for ext in video_exts) and os.path.exists(src)
         
@@ -969,55 +974,59 @@ def video_feed(camera_id):
                     ret, frame = cap.read()
                     if not ret:
                         cap.release()
-                        cap = cv2.VideoCapture(src)
-                        ret, frame = cap.read()
-                        if not ret:
-                            break
+                        break
                 
                 frame_idx += 1
-                # Run YOLO inference every 4 frames, reuse cached boxes to eliminate server lag
-                if frame_idx % 4 == 1 or cached_res is None:
-                    cached_res = engine.process_frame(frame, camera_info={"camera_id": cam["id"], "name": cam["name"], "floor": cam["floor"]})
-                    if cached_res.get("hazards"):
-                        ingest_live_hazards(cached_res["hazards"], cached_res.get("workers"))
+                # Sample inference once at start, and every 60 frames (~2-3 sec) to avoid pegging cloud CPU
+                if cached_res is None or frame_idx % 60 == 1:
+                    try:
+                        cached_res = engine.process_frame(frame, camera_info={"camera_id": cam["id"], "name": cam["name"], "floor": cam["floor"]})
+                        if cached_res and cached_res.get("hazards"):
+                            ingest_live_hazards(cached_res["hazards"], cached_res.get("workers"))
+                    except Exception as e:
+                        print(f"[VideoFeed] Detection notice: {e}")
                 
-                annotated = engine.annotate_frame(frame, cached_res)
-                cv2.putText(annotated, f"LIVE | {cam['name']}", (20, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 255), 1, cv2.LINE_AA)
+                annotated = engine.annotate_frame(frame, cached_res) if cached_res else frame
+                cv2.putText(annotated, f"LIVE | {cam.get('name', 'Camera')}", (20, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 255), 1, cv2.LINE_AA)
                 
                 # Resize for snappy network throughput
-                _, jpeg = cv2.imencode('.jpg', cv2.resize(annotated, (640, 360)), [cv2.IMWRITE_JPEG_QUALITY, 75])
+                _, jpeg = cv2.imencode('.jpg', cv2.resize(annotated, (640, 360)), [cv2.IMWRITE_JPEG_QUALITY, 70])
                 frame_bytes = jpeg.tobytes()
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-                time.sleep(0.035)
+                time.sleep(0.04) # Smooth ~25fps playback
         else:
             if src and os.path.exists(src):
                 frame = cv2.imread(src)
             else:
-                frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                cv2.putText(frame, f"Camera Feed: {cam['name']}", (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-            
+                frame = None
+
             if frame is None:
                 frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                cv2.putText(frame, f"Camera Feed: {cam['name']}", (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                cv2.putText(frame, f"Feed: {cam.get('name', 'Camera')}", (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
-            # Pre-analyze once to avoid burning CPU in infinite loop
-            res = engine.process_frame(frame, camera_info={"camera_id": cam["id"], "name": cam["name"], "floor": cam["floor"]})
-            if res.get("hazards"):
-                ingest_live_hazards(res["hazards"], res.get("workers"))
-            annotated_base = engine.annotate_frame(frame, res)
+            res = None
+            try:
+                res = engine.process_frame(frame, camera_info={"camera_id": cam["id"], "name": cam["name"], "floor": cam["floor"]})
+                if res and res.get("hazards"):
+                    ingest_live_hazards(res["hazards"], res.get("workers"))
+            except Exception as e:
+                print(f"[VideoFeed] Still inference notice: {e}")
+
+            annotated_base = engine.annotate_frame(frame, res) if res else frame
             
             while True:
                 annotated = annotated_base.copy()
                 cv2.putText(annotated, f"LIVE | {time.strftime('%Y-%m-%d %H:%M:%S')}", (20, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (34, 197, 94), 1, cv2.LINE_AA)
                 
-                _, jpeg = cv2.imencode('.jpg', cv2.resize(annotated, (640, 360)), [cv2.IMWRITE_JPEG_QUALITY, 80])
+                _, jpeg = cv2.imencode('.jpg', cv2.resize(annotated, (640, 360)), [cv2.IMWRITE_JPEG_QUALITY, 75])
                 frame_bytes = jpeg.tobytes()
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-                time.sleep(0.3)
+                time.sleep(0.5)
 
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 
 
