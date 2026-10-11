@@ -675,6 +675,7 @@
         let realGpsWatchId = null;
         let realGpsAnchor = { lat: 17.380820, lng: 78.382100 };
         let latestRealCoords = null;
+        let smoothedGpsDistance = null; // Exponential Moving Average (EMA) distance filter
 
         function setTrackingMode(mode) {
             trackingMode = mode;
@@ -745,12 +746,6 @@
                 hideDangerOverlay();
             }
         }
-
-        // Real Phone GPS State (Default: Vasavi College of Engineering, Ibrahimbagh)
-        let realGpsWatchId = null;
-        let realGpsAnchor = { lat: 17.380820, lng: 78.382100 };
-        let latestRealCoords = null;
-        let smoothedGpsDistance = null; // Exponential Moving Average (EMA) distance filter
 
         function startRealGpsWatcher() {
             if (!navigator.geolocation) {
