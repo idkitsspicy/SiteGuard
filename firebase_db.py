@@ -26,12 +26,25 @@ class FirebaseManager:
 
     def _initialize(self):
         try:
-            if not os.path.exists(self.cred_path):
-                logger.warning(f"[Firebase] Credential file '{self.cred_path}' not found. Operating in local memory fallback mode.")
+            cred = None
+            env_cred = os.environ.get("FIREBASE_CREDENTIALS_JSON")
+            if env_cred:
+                try:
+                    cred_dict = json.loads(env_cred)
+                    cred = credentials.Certificate(cred_dict)
+                    logger.info("[Firebase] Loaded credentials from FIREBASE_CREDENTIALS_JSON environment variable.")
+                except Exception as json_err:
+                    logger.warning(f"[Firebase] Failed to parse FIREBASE_CREDENTIALS_JSON: {json_err}")
+
+            if not cred and os.path.exists(self.cred_path):
+                cred = credentials.Certificate(self.cred_path)
+                logger.info(f"[Firebase] Loaded credentials from file '{self.cred_path}'.")
+
+            if not cred:
+                logger.warning(f"[Firebase] No credentials found (neither FIREBASE_CREDENTIALS_JSON nor '{self.cred_path}'). Operating in local memory fallback mode.")
                 return
 
             if not firebase_admin._apps:
-                cred = credentials.Certificate(self.cred_path)
                 firebase_admin.initialize_app(cred)
             
             self.db = firestore.client()
