@@ -9,6 +9,7 @@ from flask import Flask, render_template, request, jsonify, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from safety_engine import SafetyEngine
+from firebase_db import firebase_manager
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
@@ -353,6 +354,13 @@ SITE_STATE = {
 
 # Synchronize worker count
 SITE_STATE["active_workers_count"] = len(SITE_STATE["workers"])
+
+# Initial synchronization to Firebase Firestore
+if firebase_manager.is_connected:
+    try:
+        firebase_manager.sync_initial_state(SITE_STATE)
+    except Exception as e:
+        print(f"[Firebase] Initial sync error: {e}")
 
 
 def calculate_haversine_distance(lat1, lon1, lat2, lon2):
@@ -699,6 +707,8 @@ def ingest_live_hazards(hazards, workers=None):
                 roster_worker["ppe"]["vest"] = "MISSING"
             roster_worker["active_violations"] = max(1, roster_worker.get("active_violations", 0) + 1)
             roster_worker["last_detected"] = now_str
+            if firebase_manager.is_connected:
+                firebase_manager.update_worker(roster_worker)
         else:
             new_worker = {
                 "id": w_id,
@@ -721,6 +731,8 @@ def ingest_live_hazards(hazards, workers=None):
             }
             SITE_STATE["workers"].append(new_worker)
             SITE_STATE["active_workers_count"] = len(SITE_STATE["workers"])
+            if firebase_manager.is_connected:
+                firebase_manager.update_worker(new_worker)
 
         # Check if identical active hazard already recorded recently (within last 45s) to prevent spam
         existing = next(
@@ -749,6 +761,8 @@ def ingest_live_hazards(hazards, workers=None):
             }
             SITE_STATE["hazards"].insert(0, hz_entry)
             updated = True
+            if firebase_manager.is_connected:
+                firebase_manager.save_hazard(hz_entry)
         else:
             existing["timestamp"] = now
             existing["time"] = now_str
@@ -775,7 +789,11 @@ def ingest_live_hazards(hazards, workers=None):
             SITE_STATE["site_safety_status"] = "SAFE"
             SITE_STATE["safety_score"] = 99
 
+        if firebase_manager.is_connected:
+            firebase_manager.update_site_metrics(SITE_STATE)
+
     return updated
+
 
 
 @app.route("/api/upload-media", methods=["POST"])
@@ -852,6 +870,9 @@ def upload_media():
             SITE_STATE["cameras"][cam_index] = custom_cam
         else:
             SITE_STATE["cameras"].append(custom_cam)
+
+        if firebase_manager.is_connected:
+            firebase_manager.update_camera(custom_cam)
 
         # Ingest new hazards into platform state and hazard log
         if res.get("hazards"):
@@ -1005,12 +1026,15 @@ def update_hazard_status(hazard_id):
     data = request.json or {}
     new_status = data.get("status", "Acknowledged")
     notes = data.get("notes", "")
+    resolved_by = data.get("resolved_by", "Safety Officer")
     
     for h in SITE_STATE["hazards"]:
         if h["id"] == hazard_id:
             h["status"] = new_status
             if notes:
                 h["resolve_notes"] = notes
+            if new_status == "Resolved":
+                h["resolved_by"] = resolved_by
             h["updated_at"] = time.strftime("%I:%M %p")
             
             # Recalculate site active hazards count
@@ -1030,10 +1054,38 @@ def update_hazard_status(hazard_id):
             else:
                 SITE_STATE["site_safety_status"] = "SAFE"
                 SITE_STATE["safety_score"] = 99
+
+            # Sync update to Firebase Firestore
+            if firebase_manager.is_connected:
+                firebase_manager.update_hazard_status(hazard_id, new_status, notes=notes, resolved_by=resolved_by)
+                firebase_manager.update_site_metrics(SITE_STATE)
                 
             return jsonify({"success": True, "hazard": h, "site_state": SITE_STATE})
             
     return jsonify({"error": "Hazard not found"}), 404
+
+
+@app.route("/api/firebase/status", methods=["GET"])
+def get_firebase_status():
+    return jsonify({
+        "connected": firebase_manager.is_connected,
+        "project_id": "siteguard-7324f",
+        "collections": ["hazards", "workers", "cameras", "site_metrics"] if firebase_manager.is_connected else [],
+        "last_sync": time.strftime("%I:%M:%S %p")
+    })
+
+
+@app.route("/api/firebase/sync", methods=["POST"])
+def trigger_firebase_sync():
+    if not firebase_manager.is_connected:
+        return jsonify({"success": False, "error": "Firebase Firestore is not connected"}), 503
+    firebase_manager.sync_initial_state(SITE_STATE)
+    return jsonify({
+        "success": True,
+        "message": "Full synchronization to Cloud Firestore complete.",
+        "project_id": "siteguard-7324f"
+    })
+
 
 
 @app.route("/api/observations/<obs_id>/action", methods=["POST"])

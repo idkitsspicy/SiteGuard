@@ -43,12 +43,43 @@ document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     fetchSiteState();
     fetchGPSWorkers();
+    checkFirebaseStatus();
     startClock();
     updateTabRecommendations();
     
     setInterval(fetchSiteState, 10000);
     setInterval(fetchGPSWorkers, 3000);
+    setInterval(checkFirebaseStatus, 30000);
 });
+
+// Firebase Cloud Status Check
+async function checkFirebaseStatus() {
+    try {
+        const res = await fetch('/api/firebase/status');
+        if (!res.ok) return;
+        const data = await res.json();
+        const badge = document.getElementById('firebase-status-badge');
+        if (badge) {
+            if (data.connected) {
+                badge.style.display = 'inline-flex';
+                badge.style.background = 'rgba(16, 185, 129, 0.12)';
+                badge.style.color = '#10b981';
+                badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                badge.innerHTML = '<i class="fa-solid fa-cloud" style="color: #10b981;"></i> <span>Firestore Connected</span>';
+                badge.title = `Connected to Firebase Cloud Firestore (${data.project_id})`;
+            } else {
+                badge.style.background = 'rgba(239, 68, 68, 0.12)';
+                badge.style.color = '#ef4444';
+                badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                badge.innerHTML = '<i class="fa-solid fa-cloud-slash"></i> <span>Firestore Offline</span>';
+                badge.title = 'Firebase offline - local fallback active';
+            }
+        }
+    } catch (e) {
+        console.warn("Firebase status check:", e);
+    }
+}
+
 
 // Real-time Clock
 function startClock() {

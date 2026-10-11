@@ -18,6 +18,11 @@ static/uploads/*
 !static/uploads/.gitkeep
 *.log
 
+# Firebase & Credentials
+serviceAccountKey.json
+*credentials*.json
+.env
+
 # OS files
 .DS_Store
 Thumbs.db
